@@ -26,8 +26,6 @@ def viterbi_decode(score, transition_params):
           viterbi.reverse()
           viterbis.append(viterbi)
       return viterbis
-
-
 def lstm(x,A,W):
     with tf.name_scope("lstm"):
         x=tf.reshape(x,shape=[-1,-1,frame_size])
@@ -36,27 +34,19 @@ def lstm(x,A,W):
         rnn_cell_bw=tf.nn.rnn_cell.LSTMCell(hidden_num)
         #后向RNN
         # 其实这是一个双向深度RNN网络,对于每一个长度为n的序列[x1,x2,x3,...,xn]的每一个xi,都会在深度方向跑一遍RNN,跑上hidden_num个隐层单元
-
         output,states=tf.nn.bidirectional_dynamic_rnn(rnn_cell_fw,rnn_cell_bw,x,dtype=tf.float32)
         #注意output有两部分：output_fw和output_bw.
         #states这个中间状态输出不管
         #将output[0]和Output[1]拼接在一起
-
-
         fw_output = output[0][:,:,-1] #output[0]的形状：[batch_size, max_time, cell_fw.output_size]
         # 所以 取各个batch,各个时间步里面的最后一个隐藏层的输出.
         bw_output = output[1][:,:,-1] #与fw_output同理
-
         #各项拼接
-        output=tf.concat([fw_output,bw_output],1)#[batch_size,sequence_length,2]
-
+        output=tf.concat([fw_output,bw_output],2)#[batch_size,sequence_length,2]
+        print(output)
         P= tf.tanh(tf.matmul(output,W),name="P")#[batch_size,sequence_length,num_tags]每个P[i]就是一个序列的P矩阵
         #这个P矩阵就是将来需要丢到crf里面的输入之一
-
-
         return P
-
-
 dataGenerator = DATA_PREPROCESS(train_data="data/source_data.txt",train_label="data/source_label.txt",
                          test_data="data/tes_datat.txt",test_label="data/test_label.txt",
                          embedded_words="data/source_data.txt.ebd.npy",
@@ -92,6 +82,9 @@ W=tf.Variable(tf.truncated_normal(stddev=0.1,shape=[2,num_tags]))
 #生成bi-lstm网络
 pred_p=lstm(x,A,W)
 #crf的log似然损失函数
+print(x)
+print(A)
+print(pred_p)
 cost=crf.crf_log_likelihood(inputs=pred_p,tag_indices=y,sequence_lengths=seq_lengths)
 train=tf.train.AdamOptimizer(train_rate).minimize(cost)
 
