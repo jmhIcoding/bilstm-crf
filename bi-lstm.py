@@ -4,8 +4,6 @@ import  tensorflow as tf
 from  baseTool import DATA_PREPROCESS
 from tensorflow.contrib import  crf
 import  numpy as np
-
-
 def viterbi_decode(score, transition_params):
       """Decode the highest scoring sequence of tags outside of TensorFlow.
         修改crf里面的源码,本函数支持一个batch一个batch的解码
@@ -54,13 +52,9 @@ def lstm(x,A,W):
 
         P= tf.tanh(tf.matmul(output,W),name="P")#[batch_size,sequence_length,num_tags]每个P[i]就是一个序列的P矩阵
         #这个P矩阵就是将来需要丢到crf里面的输入之一
-        #得到一个输入sequence_length,形状是[batch_size]
-        sequence_length=[]
-        batch=tf.shape(x)[0]
-        for i in range(batch):
-            sequence_length.append(tf.shape(x[i])[0])
 
-        return P,tf.to_float(sequence_length)
+
+        return P
 
 
 dataGenerator = DATA_PREPROCESS(train_data="data/source_data.txt",train_label="data/source_label.txt",
@@ -87,6 +81,7 @@ num_tags=dataGenerator.state_nums
 #定义输入,输出,注意序列的长度是变化的。
 x=tf.placeholder(dtype=tf.float32,shape=[None,None,frame_size],name="inputx")
 y=tf.placeholder(dtype=tf.float32,shape=[None,num_tags],name="expected_y")
+seq_lengths = tf.placeholder(dtype=tf.int32,shape=[None],name="batch_sequencelengths") #专门提供给crf使用的
 #定义P,A矩阵;
 # P矩阵形状: 词的个数 X 状态数目:这个矩阵是计算出来的结果,不是以单独的矩阵出现的
 # A矩阵形状: 状态数目 X 状态数目
@@ -95,7 +90,7 @@ A=tf.Variable(tf.truncated_normal(stddev=0.1,shape=[num_tags,num_tags]))
 W=tf.Variable(tf.truncated_normal(stddev=0.1,shape=[2,num_tags]))
 
 #生成bi-lstm网络
-pred_p,seq_lengths=lstm(x,A,W)
+pred_p=lstm(x,A,W)
 #crf的log似然损失函数
 cost=crf.crf_log_likelihood(inputs=pred_p,tag_indices=y,sequence_lengths=seq_lengths)
 train=tf.train.AdamOptimizer(train_rate).minimize(cost)
@@ -104,11 +99,11 @@ sess=tf.Session()
 sess.run(tf.initialize_all_variables())
 step=1
 while step<train_step:
-    batch_x,batch_y=dataGenerator.next_train_batch(batch_size)
+    batch_x,batch_y,batch_seq_lengths=dataGenerator.next_train_batch(batch_size)
 #    batch_x=tf.reshape(batch_x,shape=[batch_size,sequence_length,frame_size])
-    _loss,__=sess.run([cost,train],feed_dict={x:batch_x,y:batch_y})
+    _loss,__=sess.run([cost,train],feed_dict={x:batch_x,y:batch_y,seq_lengths:batch_seq_lengths})
     if step % display_step ==0:
         #计算一波正确率
-        valid_x ,valid_y = dataGenerator.next_test_batch(batch_size)
-        scores,transition_parameter = sess.run([pred_p,A],feed_dict={x:valid_x,y:valid_y})
+        valid_x ,valid_y,batch_seq_lengths = dataGenerator.next_test_batch(batch_size)
+        scores,transition_parameter = sess.run([pred_p,A],feed_dict={x:valid_x,y:valid_y,seq_lengths:batch_seq_lengths})
     step+=1
