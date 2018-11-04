@@ -13,6 +13,7 @@ class DATA_PREPROCESS:
 
         # 载入词向量
         self.word2vec=np.load(self.word2vec_file)
+        self.embedding_vec_length = len(self.word2vec[0])
 
         with open(self.vocb_file,encoding='utf8') as fp:
             self.index2word = json.load(fp)
@@ -27,6 +28,8 @@ class DATA_PREPROCESS:
         if state != None:
             for each in state:
                 self.state.setdefault(each,len(self.state))
+
+
         #载入训练集
         with open(self.train_data_file,encoding='utf8') as fp:
             train_raw_data = fp.readlines()
@@ -54,6 +57,9 @@ class DATA_PREPROCESS:
                             labels.append(self.state[label])
                 train_labels.append(labels)
             self.train_labels =train_labels
+
+        #得到state的数量
+        self.state_nums = len(self.state)
 
         #划分训练集为 训练集和验证集
             self.train_set=set()
