@@ -96,6 +96,7 @@ class DATA_PREPROCESS:
     def next_train_batch(self,batch_size):
         x=[]
         y=[]
+        seq_lengths=[]
         while len(x) < batch_size:
             index = random.randint(0,len(self.train_data)-1)
             if not index in self.valid_set:
@@ -105,11 +106,13 @@ class DATA_PREPROCESS:
                     _x[i]=self.word2vec[ int(_x[i]) ]
                 x.append(_x)
                 y.append(_label)
+                seq_lengths.append(len(_label))
         return x,y
 
     def next_valid_batch(self,batch_size):
         x=[]
         y=[]
+        seq_lengths = []
         while len(x) < batch_size:
             index = random.randint(0,len(self.valid_set)-1)
             if index in self.valid_set:
@@ -119,11 +122,14 @@ class DATA_PREPROCESS:
                     _x[i]=self.word2vec[int( _x[i] )]
                 x.append(_x)
                 y.append(_label)
-        return x,y
+                seq_lengths.append(len(_label))
+
+        return x,y,seq_lengths
 
     def test(self):
         x=[]
         y=[]
+        seq_lengths=[]
         for index in range(len(self.test_lines)):
                 _label = self.test_labels[index]
                 _x=self.test_lines[index]
@@ -131,7 +137,8 @@ class DATA_PREPROCESS:
                     _x[i]=self.word2vec[ int(_x[i] )]
                 x.append(_x)
                 y.append(_label)
-        return x,y
+                seq_lengths.append(len(_label))
+        return x,y,seq_lengths
 if __name__ == '__main__':
     data=DATA_PREPROCESS(train_data="data/source_data.txt",train_label="data/source_label.txt",
                          test_data="data/tes_datat.txt",test_label="data/test_label.txt",
