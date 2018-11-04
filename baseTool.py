@@ -62,8 +62,8 @@ class DATA_PREPROCESS:
         self.state_nums = len(self.state)
 
         #划分训练集为 训练集和验证集
-            self.train_set=set()
-            self.valid_set=set()
+        self.train_set=set()
+        self.valid_set=set()
 
         while len( self.valid_set ) < int(seperate_rate * len(self.train_data)):
             index = random.randint(0,len(self.train_data)-1)
