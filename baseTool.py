@@ -26,11 +26,14 @@ class DATA_PREPROCESS:
         #处理隐状态
         self.state={}
         if state != None:
-            for each in state:
+            self.state={'O':0}
+            state.remove('O')
+            for each in state :
                 self.state.setdefault(each,len(self.state))
 
 
         #载入训练集
+        self.sequence_length = 0
         with open(self.train_data_file,encoding='utf8') as fp:
             train_raw_data = fp.readlines()
             train_lines =[]
@@ -38,6 +41,8 @@ class DATA_PREPROCESS:
                 raw_words = line.split(" ")
                 words = [self.word2index(word) for word in raw_words ]
                 train_lines.append(words)
+                if len(words) > self.sequence_length :
+                    self.sequence_length = len(words)
             self.train_data = train_lines
 
         with open(self.train_label_file,encoding='utf8') as fp:
@@ -77,6 +82,8 @@ class DATA_PREPROCESS:
                 raw_words = line.split(" ")
                 words = [self.word2index(word) for word in raw_words ]
                 train_lines.append(words)
+                if len(words) > self.sequence_length :
+                    self.sequence_length = len(words)
             self.test_lines = test_lines
 
         with open(self.test_label_file,encoding='utf8') as fp:
@@ -100,14 +107,17 @@ class DATA_PREPROCESS:
         while len(x) < batch_size:
             index = random.randint(0,len(self.train_data)-1)
             if not index in self.valid_set:
-                _label = self.train_labels[index]
-                _x=self.train_data[index]
+                _label = ( self.train_labels[index]+ np.zeros(shape=[self.sequence_length]).tolist() )[:self.sequence_length]
+                _x = self.train_data[index]
+                __x=[]
                 for i in range(len(_x)):
-                    _x[i]=self.word2vec[ int(_x[i]) ]
-                x.append(_x)
+                    __x +=(self.word2vec[ int(_x[i]) ].tolist())
+                __x=__x + np.zeros(shape=[self.sequence_length * self.embedding_vec_length-len(__x)]).tolist()
+                x.append(np.array(__x))
                 y.append(_label)
-                seq_lengths.append(len(_label))
-        return x,y
+                seq_lengths.append(self.sequence_length)
+        x=np.reshape(x,newshape=[-1])
+        return np.float32(x),np.int32(y),np.int32(seq_lengths)
 
     def next_valid_batch(self,batch_size):
         x=[]
@@ -116,35 +126,40 @@ class DATA_PREPROCESS:
         while len(x) < batch_size:
             index = random.randint(0,len(self.valid_set)-1)
             if index in self.valid_set:
-                _label = self.train_labels[index]
+                _label = ( np.array(self.train_labels[index]).tolist()+np.zeros(shape=[self.sequence_length]).tolist() )[:self.sequence_length]
                 _x=self.train_data[index]
+                __x=[]
                 for i in range(len(_x)):
-                    _x[i]=self.word2vec[int( _x[i] )]
-                x.append(_x)
+                    __x +=(self.word2vec[ int(_x[i]) ].tolist())
+                __x=__x + np.zeros(shape=[self.sequence_length * self.embedding_vec_length-len(__x)]).tolist()
+                x.append(np.array(__x))
                 y.append(_label)
-                seq_lengths.append(len(_label))
-
-        return x,y,seq_lengths
+                seq_lengths.append(self.sequence_length)
+        x=np.reshape(x,newshape=[-1])
+        return np.float32(x),np.int32(y),np.int32(seq_lengths)
 
     def test(self):
         x=[]
         y=[]
         seq_lengths=[]
         for index in range(len(self.test_lines)):
-                _label = self.test_labels[index]
+                _label = ( np.array(self.test_labels[index]).tolist()+np.zeros(shape=[self.sequence_length]).tolist())[:self.sequence_length]
                 _x=self.test_lines[index]
+                __x=[]
                 for i in range(len(_x)):
-                    _x[i]=self.word2vec[ int(_x[i] )]
-                x.append(_x)
+                    __x +=(self.word2vec[ int(_x[i]) ].tolist())
+                __x=__x + np.zeros(shape=[self.sequence_length * self.embedding_vec_length-len(__x)]).tolist()
+                x.append(np.array(__x))
                 y.append(_label)
-                seq_lengths.append(len(_label))
-        return x,y,seq_lengths
+                seq_lengths.append(self.sequence_length)
+        x=np.reshape(x,newshape=[-1])
+        return np.float32(x),np.int32(y),np.int32(seq_lengths)
 if __name__ == '__main__':
     data=DATA_PREPROCESS(train_data="data/source_data.txt",train_label="data/source_label.txt",
                          test_data="data/tes_datat.txt",test_label="data/test_label.txt",
                          embedded_words="data/source_data.txt.ebd.npy",
                          vocb="data/source_data.txt.vab")
-    x,y=data.next_valid_batch(batch_size=2)
+    x,y,_=data.next_train_batch(batch_size=2)
     print(x)
     print(y)
 
