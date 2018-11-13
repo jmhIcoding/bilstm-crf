@@ -10,30 +10,84 @@ def viterbi_decode(score, transition_params,supervised_y=None):
         修改crf里面的源码,本函数支持一个batch一个batch的解码
       """
       global sequence_length
+      global O_index
+      global dataGenerator
       shape = np.shape(score)
       viterbis=[]
       right_rate =0
       for i in range(shape[0]):
-          viterbi=crf.viterbi_decode(score[i],transition_params[i])
+          viterbi=crf.viterbi_decode(score[i],transition_params)
           viterbis.append(viterbi)
 
-      if True:
+      if supervised_y is not None:
           #测试命名实体的准确率:看有多少个实体名称被识别出来
           namely_set_supervise=set()
           namely_set_predict=set()
-          #先计算各个位置的预测结果
-          total_cnt =0
-          right_cnt =0
+          B_LOC=0
+          B_PER=0
+          LOC_Len=0
+          PER_Len=0
+          for simple_index in range(np.shape(supervised_y)[0]):
+                for col_index in range(np.shape(supervised_y)[1]):
+                    if supervised_y[simple_index,col_index]==dataGenerator.state['B-LOC']:
+                        B_LOC=col_index
+                        LOC_Len=1
+                    if supervised_y[simple_index,col_index]==dataGenerator.state['I-LOC']:
+                        LOC_Len+=1
+                    if supervised_y[simple_index,col_index]==dataGenerator.state['B-PER']:
+                        B_PER=col_index
+                        PER_Len=1
+                    if supervised_y[simple_index,col_index]==dataGenerator.state['I-PER']:
+                        PER_Len+=1
+                    if supervised_y[simple_index,col_index]==dataGenerator.state['O']:
+                        if PER_Len==0 and LOC_Len==0:
+                            continue
+                        if PER_Len>0 and LOC_Len >0:
+                            #一定有错误
+                            LOC_Len=0
+                            PER_Len=0
+                            continue
+                        if PER_Len>0:
+                            namely_set_supervise.add(('PER',simple_index,B_PER,PER_Len))
+                        if LOC_Len>0:
+                            namely_set_supervise.add(('LOC',simple_index,B_LOC,LOC_Len))
+                        LOC_Len=0
+                        PER_Len=0
 
           for simple_index in range(np.shape(supervised_y)[0]):
                 for col_index in range(np.shape(supervised_y)[1]):
-                    if supervised_y[simple_index,col_index]==viterbis[simple_index][0][col_index]:
-
-                        right_cnt+=1
-                    total_cnt+=1
-          right_rate = right_cnt/total_cnt
+                    if viterbis[simple_index][0][col_index]==dataGenerator.state['B-LOC']:
+                        B_LOC=col_index
+                        LOC_Len=1
+                    if viterbis[simple_index][0][col_index]==dataGenerator.state['I-LOC']:
+                        LOC_Len+=1
+                    if viterbis[simple_index][0][col_index]==dataGenerator.state['B-PER']:
+                        B_PER=col_index
+                        PER_Len=1
+                    if viterbis[simple_index][0][col_index]==dataGenerator.state['I-PER']:
+                        PER_Len+=1
+                    if viterbis[simple_index][0][col_index]==dataGenerator.state['O']:
+                        if PER_Len>0 and LOC_Len >0:
+                            #一定有错误
+                            LOC_Len=0
+                            PER_Len=0
+                            continue
+                        if PER_Len>0:
+                            namely_set_supervise.add(('PER',simple_index,B_PER,PER_Len))
+                        if LOC_Len>0:
+                            namely_set_supervise.add(('LOC',simple_index,B_LOC,LOC_Len))
+                        LOC_Len=0
+                        PER_Len=0
+          SAME=namely_set_supervise.intersection(namely_set_predict)
+          print('predict',namely_set_predict)
+          print('surpervise',namely_set_supervise)
+          PRECISION=len(SAME)/(0.000001+len(namely_set_predict))
+          RECALL=len(SAME)/(0.000001+len(namely_set_predict))
+          F1_SCORE=2*PRECISION*RECALL/(PRECISION+RECALL+0.000001)
+          right_rate =F1_SCORE
       return viterbis,right_rate
-def lstm(x,A,W):
+def lstm(x,A,W,b):
+    global batch_size,sequence_length,frame_size,hidden_num
     with tf.name_scope("lstm"):
         x=tf.reshape(x,shape=[batch_size,sequence_length,frame_size])
         rnn_cell_fw=tf.nn.rnn_cell.LSTMCell(hidden_num)
@@ -50,19 +104,20 @@ def lstm(x,A,W):
         bw_output = output[1][:,:,:] #与fw_output同理
         #各项拼接
         output=tf.concat([fw_output,bw_output],2)#[batch_size,sequence_length,2]
-        print(output)
-        P= tf.tanh(tf.matmul(output,W),name="P")#[batch_size,sequence_length,num_tags]每个P[i]就是一个序列的P矩阵
+        P= tf.nn.softmax(tf.matmul(output,W)+b,dim=2,name="P")#[batch_size,sequence_length,num_tags]每个P[i]就是一个序列的P矩阵
         #这个P矩阵就是将来需要丢到crf里面的输入之一
         return P
 
-dataGenerator = DATA_PREPROCESS(train_data="data/source_data.txt",train_label="data/source_label.txt",
+dataGenerator = DATA_PREPROCESS(
+                         train_data="data/source_data.txt",train_label="data/source_label.txt",
                          test_data="data/tes_datat.txt",test_label="data/test_label.txt",
                          embedded_words="data/source_data.txt.ebd.npy",
                          vocb="data/source_data.txt.vab"
                     )
-train_rate=0.001
-train_step=100
-batch_size=2
+O_index = dataGenerator.state['O']
+train_rate=0.1
+train_step=10000
+batch_size=50
 display_step=10
 
 #每个词的词向量的长度
@@ -84,9 +139,9 @@ seq_lengths = tf.placeholder(dtype=tf.int32,shape=[None],name="batch_sequencelen
 A=tf.Variable(tf.truncated_normal(stddev=0.1,shape=[num_tags,num_tags]))
 #W矩阵,bi-LSTM 的每个时间步乘以W
 W=tf.Variable(tf.truncated_normal(stddev=0.1,shape=[batch_size,2,num_tags]))
-
+b=tf.Variable(tf.zeros(shape=[batch_size,sequence_length,num_tags]))
 #生成bi-lstm网络
-pred_p=lstm(x,A,W)
+pred_p=lstm(x,A,W,b)
 #crf的log似然损失函数
 print(x)
 print(A)
