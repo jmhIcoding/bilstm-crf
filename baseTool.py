@@ -2,6 +2,7 @@ __author__ = 'jmh081701'
 import  numpy as np
 import  random
 import json
+import  copy
 class DATA_PREPROCESS:
     def __init__(self,train_data,train_label,test_data,test_label,embedded_words,vocb,seperate_rate=0.1,state={'O','B-LOC','I-LOC','B-PER','I-PER'}):
         self.train_data_file = train_data
@@ -43,7 +44,8 @@ class DATA_PREPROCESS:
                 train_lines.append(words)
                 if len(words) > self.sequence_length :
                     self.sequence_length = len(words)
-            self.train_data = train_lines
+            self.train_data = copy.deepcopy(train_lines)
+        print(len(self.train_data))
 
         with open(self.train_label_file,encoding='utf8') as fp:
             train_raw_label = fp.readlines()
@@ -61,8 +63,9 @@ class DATA_PREPROCESS:
                             self.state.setdefault(label,len(self.state))
                             labels.append(self.state[label])
                 train_labels.append(labels)
-            self.train_labels =train_labels
-
+            self.train_labels =copy.deepcopy(train_labels)
+        print(len(self.train_data),len(self.train_labels))
+        assert len(self.train_data)==len(self.train_labels)
         #得到state的数量
         self.state_nums = len(self.state)
 
@@ -73,7 +76,7 @@ class DATA_PREPROCESS:
         while len( self.valid_set ) < int(seperate_rate * len(self.train_data)):
             index = random.randint(0,len(self.train_data)-1)
             self.valid_set.add(index)
-
+        assert len(self.train_data)==len(self.train_labels)
         #载入测试集
         with open(self.test_data_file,encoding='utf8') as fp:
             test_raw_data = fp.readlines()
@@ -81,11 +84,11 @@ class DATA_PREPROCESS:
             for line in test_raw_data:
                 raw_words = line.split(" ")
                 words = [self.word2index(word) for word in raw_words ]
-                train_lines.append(words)
+                test_lines.append(words)
                 if len(words) > self.sequence_length :
                     self.sequence_length = len(words)
-            self.test_lines = test_lines
-
+            self.test_lines =copy.deepcopy( test_lines)
+        assert len(self.train_data)==len(self.train_labels)
         with open(self.test_label_file,encoding='utf8') as fp:
             test_raw_label = fp.readlines()
             test_labels =[]
@@ -93,7 +96,8 @@ class DATA_PREPROCESS:
                 raw_labels = line.split(" ")
                 labels = [self.state.get(label,self.state['O']) for label in raw_labels]
                 test_lines.append(labels)
-            self.test_labels =test_labels
+            self.test_labels = copy.deepcopy(test_labels)
+        assert len(self.train_data)==len(self.train_labels)
 
     def word2index(self,word):
         return self.words.get(word,self.words['<UNK>'])
@@ -104,10 +108,16 @@ class DATA_PREPROCESS:
         x=[]
         y=[]
         seq_lengths=[]
+
         while len(x) < batch_size:
-            index = random.randint(0,len(self.train_data)-1)
+            index = random.randint(0,len(self.train_data)-2)
             if not index in self.valid_set:
-                _label = ( self.train_labels[index]+ np.zeros(shape=[self.sequence_length]).tolist() )[:self.sequence_length]
+                try:
+                    #print({"index":index,"len(self.train_labels":len(self.train_labels),"train_data":len(self.train_data)})
+                    _label = ( self.train_labels[index]+ np.zeros(shape=[self.sequence_length]).tolist() )[:self.sequence_length]
+                except:
+                    print({"index":index,"len(self.train_labels":len(self.train_labels),"train_data":len(self.train_data)})
+                    raise  "Data Error"
                 _x = self.train_data[index]
                 __x=[]
                 for i in range(len(_x)):
@@ -124,7 +134,7 @@ class DATA_PREPROCESS:
         y=[]
         seq_lengths = []
         while len(x) < batch_size:
-            index = random.randint(0,len(self.valid_set)-1)
+            index = random.randint(0,len(self.valid_set)-2)
             if index in self.valid_set:
                 _label = ( np.array(self.train_labels[index]).tolist()+np.zeros(shape=[self.sequence_length]).tolist() )[:self.sequence_length]
                 _x=self.train_data[index]

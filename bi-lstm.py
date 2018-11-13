@@ -9,29 +9,30 @@ def viterbi_decode(score, transition_params,supervised_y=None):
       """Decode the highest scoring sequence of tags outside of TensorFlow.
         修改crf里面的源码,本函数支持一个batch一个batch的解码
       """
-
+      global sequence_length
       shape = np.shape(score)
       viterbis=[]
+      right_rate =0
       for i in range(shape[0]):
-          trellis = np.zeros_like(score)
-          backpointers = np.zeros_like(score, dtype=np.int32)
-          trellis[0] = score[0]
-
-          for t in range(1, score.shape[0]):
-            v = np.expand_dims(trellis[t - 1], 1) + transition_params
-            trellis[t] = score[t] + np.max(v, 0)
-            backpointers[t] = np.argmax(v, 0)
-
-          viterbi = [np.argmax(trellis[-1])]
-          for bp in reversed(backpointers[1:]):
-            viterbi.append(bp[viterbi[-1]])
-          viterbi.reverse()
+          viterbi=crf.viterbi_decode(score[i],transition_params[i])
           viterbis.append(viterbi)
-      if supervised_y :
-          pass
-          #测试命名实体的准确率
-      return viterbis
 
+      if True:
+          #测试命名实体的准确率:看有多少个实体名称被识别出来
+          namely_set_supervise=set()
+          namely_set_predict=set()
+          #先计算各个位置的预测结果
+          total_cnt =0
+          right_cnt =0
+
+          for simple_index in range(np.shape(supervised_y)[0]):
+                for col_index in range(np.shape(supervised_y)[1]):
+                    if supervised_y[simple_index,col_index]==viterbis[simple_index][0][col_index]:
+
+                        right_cnt+=1
+                    total_cnt+=1
+          right_rate = right_cnt/total_cnt
+      return viterbis,right_rate
 def lstm(x,A,W):
     with tf.name_scope("lstm"):
         x=tf.reshape(x,shape=[batch_size,sequence_length,frame_size])
@@ -74,8 +75,8 @@ hidden_num=1
 num_tags=dataGenerator.state_nums
 
 #定义输入,输出,注意序列的长度是变化的。
-x=tf.placeholder(dtype=tf.float32,shape=[None,sequence_length * frame_size],name="inputx")
-y=tf.placeholder(dtype=tf.int32,shape=[None,num_tags],name="expected_y")
+x=tf.placeholder(dtype=tf.float32,shape=[None],name="inputx")
+y=tf.placeholder(dtype=tf.int32,shape=[None,None],name="expected_y")
 seq_lengths = tf.placeholder(dtype=tf.int32,shape=[None],name="batch_sequencelengths") #专门提供给crf使用的
 #定义P,A矩阵;
 # P矩阵形状: 词的个数 X 状态数目:这个矩阵是计算出来的结果,不是以单独的矩阵出现的
@@ -102,6 +103,8 @@ while step<train_step:
     _loss,__=sess.run([cost,train],feed_dict={x:batch_x,y:batch_y,seq_lengths:batch_seq_lengths})
     if step % display_step ==0:
         #计算一波正确率
-        valid_x ,valid_y,batch_seq_lengths = dataGenerator.next_test_batch(batch_size)
+        valid_x ,valid_y,batch_seq_lengths = dataGenerator.next_valid_batch(batch_size)
         scores,transition_parameter = sess.run([pred_p,A],feed_dict={x:valid_x,y:valid_y,seq_lengths:batch_seq_lengths})
+        viterbi,right_rate = viterbi_decode(scores,transition_parameter,supervised_y=valid_y)
+        print({"step":step,"right_rate":right_rate})
     step+=1
