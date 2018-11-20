@@ -86,7 +86,7 @@ def viterbi_decode(score, transition_params,supervised_y=None):
           F1_SCORE=2*PRECISION*RECALL/(PRECISION+RECALL+0.000001)
           right_rate =F1_SCORE
       return viterbis,right_rate
-def lstm(x,A,W,b):
+def lstm(x,A,Wc,bc,V1,V2):
     global batch_size,sequence_length,frame_size,hidden_num
     with tf.name_scope("lstm"):
         x=tf.reshape(x,shape=[batch_size,sequence_length,frame_size])
@@ -99,25 +99,28 @@ def lstm(x,A,W,b):
         #注意output有两部分：output_fw和output_bw.
         #states这个中间状态输出不管
         #将output[0]和Output[1]拼接在一起
-        fw_output = output[0][:,:,:] #output[0]的形状：[batch_size, max_time, cell_fw.output_size]
+        fw_output = output[0][:,:,:] #output[0]的形状：[batch_size, max_time, cell_fw.output_size(hidden_num)]
         # 所以 取各个batch,各个时间步里面的最后一个隐藏层的输出.
         bw_output = output[1][:,:,:] #与fw_output同理
         #各项拼接
-        output=tf.concat([fw_output,bw_output],2)#[batch_size,sequence_length,2]
-        P= tf.nn.softmax(tf.matmul(output,W)+b,dim=2,name="P")#[batch_size,sequence_length,num_tags]每个P[i]就是一个序列的P矩阵
+        Lai=tf.matmul(fw_output,V1) #[batch_size,sequence_length,hidden_num]*[batch_size,hidden_num,num_tag]=[batch_size,sequence_length,num_tags]
+        Rai=tf.matmul(bw_output,V2)
+        concat=tf.concat([Lai,Rai],2)#[batch_size,sequence_length,2*num_tags]
+        output=tf.tanh(tf.matmul(concat,Wc)+bc,'tanh_concat')
+        P= tf.nn.softmax(output,dim=2,name="P")#[batch_size,sequence_length,num_tags]每个P[i]就是一个序列的P矩阵
         #这个P矩阵就是将来需要丢到crf里面的输入之一
         return P
 
 dataGenerator = DATA_PREPROCESS(
                          train_data="data/source_data.txt",train_label="data/source_label.txt",
-                         test_data="data/tes_datat.txt",test_label="data/test_label.txt",
+                         test_data="data/test_data.txt",test_label="data/test_label.txt",
                          embedded_words="data/source_data.txt.ebd.npy",
                          vocb="data/source_data.txt.vab"
                     )
 O_index = dataGenerator.state['O']
-train_rate=0.1
+train_rate=0.01
 train_step=10000
-batch_size=50
+batch_size=1
 display_step=10
 
 #每个词的词向量的长度
@@ -126,7 +129,7 @@ frame_size=dataGenerator.embedding_vec_length
 sequence_length=dataGenerator.sequence_length
 
 #前向和后向的LSTM 都是一层的
-hidden_num=1
+hidden_num=30
 num_tags=dataGenerator.state_nums
 
 #定义输入,输出,注意序列的长度是变化的。
@@ -136,12 +139,17 @@ seq_lengths = tf.placeholder(dtype=tf.int32,shape=[None],name="batch_sequencelen
 #定义P,A矩阵;
 # P矩阵形状: 词的个数 X 状态数目:这个矩阵是计算出来的结果,不是以单独的矩阵出现的
 # A矩阵形状: 状态数目 X 状态数目
-A=tf.Variable(tf.truncated_normal(stddev=0.1,shape=[num_tags,num_tags]))
-#W矩阵,bi-LSTM 的每个时间步乘以W
-W=tf.Variable(tf.truncated_normal(stddev=0.1,shape=[batch_size,2,num_tags]))
-b=tf.Variable(tf.zeros(shape=[batch_size,sequence_length,num_tags]))
+A=tf.Variable(tf.truncated_normal(stddev=0.01,shape=[num_tags,num_tags]))
+#参数矩阵
+Wc=tf.Variable(tf.truncated_normal(stddev=0.01,shape=[batch_size,2*num_tags,num_tags]))
+bc=tf.Variable(tf.zeros(shape=[batch_size,sequence_length,num_tags]))
+
+V1=tf.Variable(tf.truncated_normal(stddev=0.01,shape=[batch_size,hidden_num,num_tags]))
+V2=tf.Variable(tf.truncated_normal(stddev=0.01,shape=[batch_size,hidden_num,num_tags]))
+
+
 #生成bi-lstm网络
-pred_p=lstm(x,A,W,b)
+pred_p=lstm(x,A,Wc,bc,V1,V2)
 #crf的log似然损失函数
 print(x)
 print(A)
@@ -156,6 +164,7 @@ while step<train_step:
     batch_x,batch_y,batch_seq_lengths=dataGenerator.next_train_batch(batch_size)
 #   batch_x=tf.reshape(batch_x,shape=[batch_size,sequence_length,frame_size])
     _loss,__=sess.run([cost,train],feed_dict={x:batch_x,y:batch_y,seq_lengths:batch_seq_lengths})
+    print(step,_loss)
     if step % display_step ==0:
         #计算一波正确率
         valid_x ,valid_y,batch_seq_lengths = dataGenerator.next_valid_batch(batch_size)
