@@ -120,7 +120,7 @@ dataGenerator = DATA_PREPROCESS(
 O_index = dataGenerator.state['O']
 train_rate=0.01
 train_step=10000
-batch_size=1
+batch_size=100
 display_step=10
 
 #每个词的词向量的长度
@@ -155,7 +155,8 @@ print(x)
 print(A)
 print(pred_p)
 cost,A=crf.crf_log_likelihood(inputs=pred_p,tag_indices=y,sequence_lengths=seq_lengths,transition_params=A)
-train=tf.train.AdamOptimizer(train_rate).minimize(-cost)
+cost = -tf.reduce_mean(cost)
+train=tf.train.AdamOptimizer(train_rate).minimize(cost)
 
 sess=tf.Session()
 sess.run(tf.initialize_all_variables())
