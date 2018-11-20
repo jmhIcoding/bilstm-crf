@@ -4,7 +4,7 @@ import  random
 import json
 import  copy
 class DATA_PREPROCESS:
-    def __init__(self,train_data,train_label,test_data,test_label,embedded_words,vocb,seperate_rate=0.1,state={'O','B-LOC','I-LOC','B-PER','I-PER'}):
+    def __init__(self,train_data,train_label,test_data,test_label,embedded_words,vocb,seperate_rate=0.1,sequenct_length=100,state={'O','B-LOC','I-LOC','B-PER','I-PER'}):
         self.train_data_file = train_data
         self.train_label_file = train_label
         self.test_data_file = test_data
@@ -32,18 +32,22 @@ class DATA_PREPROCESS:
             for each in state :
                 self.state.setdefault(each,len(self.state))
 
+        #设置训练的句子长度
+        self.sequence_length = sequenct_length
 
         #载入训练集
-        self.sequence_length = 0
+
         with open(self.train_data_file,encoding='utf8') as fp:
             train_raw_data = fp.readlines()
             train_lines =[]
             for line in train_raw_data:
                 raw_words = line.split(" ")
+                if len(raw_words) > sequenct_length:
+                    raw_words = raw_words[0:sequenct_length]
                 words = [self.word2index(word) for word in raw_words ]
                 train_lines.append(words)
-                if len(words) > self.sequence_length :
-                    self.sequence_length = len(words)
+                #if len(words) > self.sequence_length :
+                #    self.sequence_length = len(words)
             self.train_data = copy.deepcopy(train_lines)
         print(len(self.train_data))
 
@@ -52,6 +56,8 @@ class DATA_PREPROCESS:
             train_labels =[]
             for line in train_raw_label:
                 raw_labels = line.split(" ")
+                if len(raw_labels) > sequenct_length:
+                    raw_labels = raw_labels[0:sequenct_length]
                 if self.state != None:
                     labels = [self.state.get(label,self.state['O']) for label in raw_labels]
                 else:
@@ -85,8 +91,8 @@ class DATA_PREPROCESS:
                 raw_words = line.split(" ")
                 words = [self.word2index(word) for word in raw_words ]
                 test_lines.append(words)
-                if len(words) > self.sequence_length :
-                    self.sequence_length = len(words)
+                #if len(words) > self.sequence_length :
+                #    self.sequence_length = len(words)
             self.test_lines =copy.deepcopy( test_lines)
         assert len(self.train_data)==len(self.train_labels)
         with open(self.test_label_file,encoding='utf8') as fp:
