@@ -82,7 +82,7 @@ def viterbi_decode(score, transition_params,supervised_y=None):
           print('predict',namely_set_predict)
           print('surpervise',namely_set_supervise)
           PRECISION=len(SAME)/(0.000001+len(namely_set_predict))
-          RECALL=len(SAME)/(0.000001+len(namely_set_predict))
+          RECALL=len(SAME)/(0.000001+len(namely_set_supervise))
           F1_SCORE=2*PRECISION*RECALL/(PRECISION+RECALL+0.000001)
           right_rate =F1_SCORE
       return viterbis,right_rate
