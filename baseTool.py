@@ -4,7 +4,7 @@ import  random
 import json
 import  copy
 class DATA_PREPROCESS:
-    def __init__(self,train_data,train_label,test_data,test_label,embedded_words,vocb,seperate_rate=0.1,sequenct_length=100,state={'O','B-LOC','I-LOC','B-PER','I-PER'}):
+    def __init__(self,train_data,train_label,test_data,test_label,embedded_words,vocb,seperate_rate=0.1,sequenct_length=100,state={'O':0,'B-LOC':1,'I-LOC':2,'B-PER':3,'I-PER':4}):
         self.train_data_file = train_data
         self.train_label_file = train_label
         self.test_data_file = test_data
@@ -27,14 +27,9 @@ class DATA_PREPROCESS:
         #处理隐状态
         self.state={}
         if state != None:
-            self.state={'O':0}
-            state.remove('O')
-            for each in state :
-                self.state.setdefault(each,len(self.state))
-
+            self.state =state
         #设置训练的句子长度
         self.sequence_length = sequenct_length
-
         #载入训练集
 
         with open(self.train_data_file,encoding='utf8') as fp:
@@ -118,6 +113,7 @@ class DATA_PREPROCESS:
         while len(x) < batch_size:
             index = random.randint(0,len(self.train_data)-2)
             if not index in self.valid_set:
+                #print(index)
                 try:
                     #print({"index":index,"len(self.train_labels":len(self.train_labels),"train_data":len(self.train_data)})
                     _label = ( self.train_labels[index]+ np.zeros(shape=[self.sequence_length]).tolist() )[:self.sequence_length]
@@ -172,10 +168,11 @@ class DATA_PREPROCESS:
         return np.float32(x),np.int32(y),np.int32(seq_lengths)
 if __name__ == '__main__':
     data=DATA_PREPROCESS(train_data="data/source_data.txt",train_label="data/source_label.txt",
-                         test_data="data/tes_datat.txt",test_label="data/test_label.txt",
+                         test_data="data/test_data.txt",test_label="data/test_label.txt",
                          embedded_words="data/source_data.txt.ebd.npy",
                          vocb="data/source_data.txt.vab")
-    x,y,_=data.next_train_batch(batch_size=2)
+    x,y,_=data.next_train_batch(batch_size=5)
+    print(data.state)
     print(x)
     print(y)
 
