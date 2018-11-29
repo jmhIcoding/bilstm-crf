@@ -100,18 +100,29 @@ class DATA_PREPROCESS:
             self.test_labels = copy.deepcopy(test_labels)
         assert len(self.train_data)==len(self.train_labels)
 
+        self.epoch_number = 0
+        self.last_batch_size = -1
+        self.last_batch_point =0
+
     def word2index(self,word):
         return self.words.get(word,self.words['<UNK>'])
     def lookup(self,word):
         return self.word2vec(self.word2index(word))
 
     def next_train_batch(self,batch_size):
+        if batch_size!= self.last_batch_size:
+
+            self.last_batch_size = batch_size
+            self.epoch_number =0
+            self.last_batch_point =0
+        print("epoch    %s "%(self.epoch_number))
         x=[]
         y=[]
         seq_lengths=[]
-
         while len(x) < batch_size:
-            index = random.randint(0,len(self.train_data)-2)
+            index = self.last_batch_point
+            self.last_batch_point =(self.last_batch_point + 1)%len(self.train_data)
+            self.epoch_number += 1 if self.last_batch_point==0 else 0
             if not index in self.valid_set:
                 #print(index)
                 try:
