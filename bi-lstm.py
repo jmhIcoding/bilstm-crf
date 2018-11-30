@@ -27,8 +27,11 @@ def viterbi_decode(score, transition_params,supervised_y=None):
           namely_set_predict=set()
           B_LOC=0
           B_PER=0
+          B_ORG=0
+
           LOC_Len=0
           PER_Len=0
+          ORG_Len=0
           for simple_index in range(np.shape(supervised_y)[0]):
                 for col_index in range(np.shape(supervised_y)[1]):
                     if supervised_y[simple_index,col_index]==dataGenerator.state['B-LOC']:
@@ -36,15 +39,23 @@ def viterbi_decode(score, transition_params,supervised_y=None):
                         LOC_Len=1
                     if supervised_y[simple_index,col_index]==dataGenerator.state['I-LOC']:
                         LOC_Len+=1
+
                     if supervised_y[simple_index,col_index]==dataGenerator.state['B-PER']:
                         B_PER=col_index
                         PER_Len=1
                     if supervised_y[simple_index,col_index]==dataGenerator.state['I-PER']:
                         PER_Len+=1
+
+                    if supervised_y[simple_index,col_index]==dataGenerator.state['B-ORG']:
+                        B_ORG=col_index
+                        ORG_Len=1
+                    if supervised_y[simple_index,col_index]==dataGenerator.state['I-ORG']:
+                        ORG_Len+=1
+
                     if supervised_y[simple_index,col_index]==dataGenerator.state['O']:
-                        if PER_Len==0 and LOC_Len==0:
+                        if PER_Len==0 and LOC_Len==0 and ORG_Len==0:
                             continue
-                        if PER_Len>0 and LOC_Len >0:
+                        if PER_Len>0 and LOC_Len >0 and ORG_Len > 0:
                             #一定有错误
                             LOC_Len=0
                             PER_Len=0
@@ -53,9 +64,18 @@ def viterbi_decode(score, transition_params,supervised_y=None):
                             namely_set_supervise.add(('PER',simple_index,B_PER,PER_Len))
                         if LOC_Len>0:
                             namely_set_supervise.add(('LOC',simple_index,B_LOC,LOC_Len))
+                        if ORG_Len>0:
+                            namely_set_supervise.add(('ORG',simple_index,B_ORG,ORG_Len))
                         LOC_Len=0
                         PER_Len=0
+                        ORG_Len=0
+          B_LOC=0
+          B_PER=0
+          B_ORG=0
 
+          LOC_Len=0
+          PER_Len=0
+          ORG_Len=0
           for simple_index in range(np.shape(supervised_y)[0]):
                 for col_index in range(np.shape(supervised_y)[1]):
                     #print(viterbis[simple_index][0])
@@ -64,23 +84,35 @@ def viterbi_decode(score, transition_params,supervised_y=None):
                         LOC_Len=1
                     if viterbis[simple_index][0][col_index]==dataGenerator.state['I-LOC']:
                         LOC_Len+=1
+
                     if viterbis[simple_index][0][col_index]==dataGenerator.state['B-PER']:
                         B_PER=col_index
                         PER_Len=1
                     if viterbis[simple_index][0][col_index]==dataGenerator.state['I-PER']:
                         PER_Len+=1
+
+                    if viterbis[simple_index][0][col_index]==dataGenerator.state['B-ORG']:
+                        B_ORG=col_index
+                        ORG_Len=1
+                    if viterbis[simple_index][0][col_index]==dataGenerator.state['I-ORG']:
+                        ORG_Len+=1
+
                     if viterbis[simple_index][0][col_index]==dataGenerator.state['O']:
-                        if PER_Len>0 and LOC_Len >0:
+                        if PER_Len>0 and LOC_Len >0 and ORG_Len>0:
                             #一定有错误
                             LOC_Len=0
                             PER_Len=0
+                            ORG_Len=0
                             continue
                         if PER_Len>0:
                             namely_set_supervise.add(('PER',simple_index,B_PER,PER_Len))
                         if LOC_Len>0:
                             namely_set_supervise.add(('LOC',simple_index,B_LOC,LOC_Len))
+                        if ORG_Len>0:
+                            namely_set_predict.add(('ORG',simple_index,B_ORG,ORG_Len))
                         LOC_Len=0
                         PER_Len=0
+                        ORG_Len=0
           SAME=namely_set_supervise.intersection(namely_set_predict)
           print('predict',namely_set_predict)
           print('surpervise',namely_set_supervise)
@@ -116,6 +148,7 @@ def lstm(x,y,A,Wc,bc,V1,V2):
         concat=tf.concat([Lai,Rai],-1)#[batch_size,sequence_length,2*num_tags]
         print(concat)
         concat = tf.reshape(concat,[-1,2*num_tags])#[batch_size * sequence_length,2*num_tags]
+        concat = tf.nn.dropout(concat,0.1)
         output=tf.nn.relu(tf.matmul(concat,Wc)+bc,'concat_op') #[batch_size * sequence_length,num_tags]
         print(output)
         output = tf.reshape(output,shape=[-1,sequence_length,num_tags],name="after_reshape") #恢复形状
