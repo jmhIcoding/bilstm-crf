@@ -4,7 +4,7 @@ import  random
 import json
 import  copy
 class DATA_PREPROCESS:
-    def __init__(self,train_data,train_label,test_data,test_label,embedded_words,vocb,seperate_rate=0.1,sequenct_length=100,state={'O':0,'B-LOC':1,'I-LOC':2,'B-PER':3,'I-PER':4}):
+    def __init__(self,train_data,train_label,test_data,test_label,embedded_words,vocb,seperate_rate=0.1,sequenct_length=100,state={'O':0,'B-LOC':1,'I-LOC':2,'B-PER':3,'I-PER':4,'B-ORG':5,'I-ORG':6}):
         self.train_data_file = train_data
         self.train_label_file = train_label
         self.test_data_file = test_data
@@ -115,7 +115,7 @@ class DATA_PREPROCESS:
             self.last_batch_size = batch_size
             self.epoch_number =0
             self.last_batch_point =0
-        print("epoch    %s "%(self.epoch_number))
+
         x=[]
         y=[]
         seq_lengths=[]
@@ -123,6 +123,8 @@ class DATA_PREPROCESS:
             index = self.last_batch_point
             self.last_batch_point =(self.last_batch_point + 1)%len(self.train_data)
             self.epoch_number += 1 if self.last_batch_point==0 else 0
+            if self.last_batch_point ==0:
+                print("epoch    %s "%(self.epoch_number))
             if not index in self.valid_set:
                 #print(index)
                 try:
