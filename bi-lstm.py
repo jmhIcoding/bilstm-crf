@@ -17,7 +17,7 @@ def viterbi_decode(score, transition_params,supervised_y=None):
       right_rate =0
       for i in range(shape[0]):
           #print(transition_params)
-          viterbi=crf.viterbi_decode(score[i],transition_params)
+          viterbi,_=crf.viterbi_decode(score[i],transition_params)
           #print(score[i])
           viterbis.append(viterbi)
 
