@@ -79,25 +79,25 @@ def viterbi_decode(score, transition_params,supervised_y=None):
           for simple_index in range(np.shape(supervised_y)[0]):
                 for col_index in range(np.shape(supervised_y)[1]):
                     #print(viterbis[simple_index][0])
-                    if viterbis[simple_index][0][col_index]==dataGenerator.state['B-LOC']:
+                    if viterbis[simple_index][col_index]==dataGenerator.state['B-LOC']:
                         B_LOC=col_index
                         LOC_Len=1
-                    if viterbis[simple_index][0][col_index]==dataGenerator.state['I-LOC']:
+                    if viterbis[simple_index][col_index]==dataGenerator.state['I-LOC']:
                         LOC_Len+=1
 
-                    if viterbis[simple_index][0][col_index]==dataGenerator.state['B-PER']:
+                    if viterbis[simple_index][col_index]==dataGenerator.state['B-PER']:
                         B_PER=col_index
                         PER_Len=1
-                    if viterbis[simple_index][0][col_index]==dataGenerator.state['I-PER']:
+                    if viterbis[simple_index][col_index]==dataGenerator.state['I-PER']:
                         PER_Len+=1
 
-                    if viterbis[simple_index][0][col_index]==dataGenerator.state['B-ORG']:
+                    if viterbis[simple_index][col_index]==dataGenerator.state['B-ORG']:
                         B_ORG=col_index
                         ORG_Len=1
-                    if viterbis[simple_index][0][col_index]==dataGenerator.state['I-ORG']:
+                    if viterbis[simple_index][col_index]==dataGenerator.state['I-ORG']:
                         ORG_Len+=1
 
-                    if viterbis[simple_index][0][col_index]==dataGenerator.state['O']:
+                    if viterbis[simple_index][col_index]==dataGenerator.state['O']:
                         if PER_Len>0 and LOC_Len >0 and ORG_Len>0:
                             #一定有错误
                             LOC_Len=0
