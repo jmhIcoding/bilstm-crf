@@ -10,7 +10,7 @@ embedding_word_path = corpus_path+".ebd"
 vacb_path = corpus_path+".vab"
 data = data_parser.TextLoader(corpus_path,batch_size=300)
 
-embedding_word_length = 50
+embedding_word_length = 80
 learning_rate =0.0001
 #输入
 input_x  = tf.placeholder(dtype=tf.float32,shape=[None,data.vacb_size],name="inputx")

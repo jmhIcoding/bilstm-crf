@@ -164,7 +164,7 @@ dataGenerator = DATA_PREPROCESS(
                          vocb="data/source_data.txt.vab"
                     )
 O_index = dataGenerator.state['O']
-train_rate=0.1
+train_rate=0.00056
 train_step=10000
 batch_size=300
 display_step=100

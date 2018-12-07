@@ -4,7 +4,7 @@ import  random
 import json
 import  copy
 class DATA_PREPROCESS:
-    def __init__(self,train_data,train_label,test_data,test_label,embedded_words,vocb,seperate_rate=0.1,sequenct_length=100,state={'O':0,'B-LOC':1,'I-LOC':2,'B-PER':3,'I-PER':4,'B-ORG':5,'I-ORG':6}):
+    def __init__(self,train_data,train_label,test_data,test_label,embedded_words,vocb,seperate_rate=0.1,sequenct_length=30,state={'O':0,'B-LOC':1,'I-LOC':2,'B-PER':3,'I-PER':4,'B-ORG':5,'I-ORG':6}):
         self.train_data_file = train_data
         self.train_label_file = train_label
         self.test_data_file = test_data
