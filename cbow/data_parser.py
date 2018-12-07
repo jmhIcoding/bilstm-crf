@@ -2,7 +2,7 @@
 __author__ = 'jmh081701'
 import  random
 class TextLoader(object):
-    def __init__(self,input_data_path,Context_length=10,batch_size=10,min_frq = 2):
+    def __init__(self,input_data_path,Context_length=10,batch_size=10,min_frq = 3):
         self.Context_length = Context_length #定义上下文的长度
         self.V =  {} # map word to index
         self.inverseV ={} #map index to word

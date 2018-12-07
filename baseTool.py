@@ -45,14 +45,12 @@ class DATA_PREPROCESS:
                 #    self.sequence_length = len(words)
             self.train_data = copy.deepcopy(train_lines)
         print(len(self.train_data))
-        line_num =0
+
         with open(self.train_label_file,encoding='utf8') as fp:
             train_raw_label = fp.readlines()
             train_labels =[]
             for line in train_raw_label:
                 raw_labels = line.split(" ")
-                raw_labels=raw_labels[0:len(train_raw_data[line_num])]
-                line_num+=1
                 if len(raw_labels) > sequenct_length:
                     raw_labels = raw_labels[0:sequenct_length]
                 if self.state != None:
@@ -62,9 +60,9 @@ class DATA_PREPROCESS:
                     for label in raw_labels:
                         if label in self.state:
                             labels.append( self.state[label])
-                        #else:
-                        #    self.state.setdefault(label,len(self.state))
-                        #    labels.append(self.state[label])
+                        else:
+                            self.state.setdefault(label,len(self.state))
+                            labels.append(self.state[label])
                 train_labels.append(labels)
             self.train_labels =copy.deepcopy(train_labels)
         print(len(self.train_data),len(self.train_labels))
@@ -113,13 +111,14 @@ class DATA_PREPROCESS:
 
     def next_train_batch(self,batch_size):
         if batch_size!= self.last_batch_size:
+
             self.last_batch_size = batch_size
             self.epoch_number =0
             self.last_batch_point =0
+
         x=[]
         y=[]
         seq_lengths=[]
-        indexs = []
         while len(x) < batch_size:
             index = self.last_batch_point
             self.last_batch_point =(self.last_batch_point + 1)%len(self.train_data)
@@ -128,10 +127,9 @@ class DATA_PREPROCESS:
                 print("epoch    %s "%(self.epoch_number))
             if not index in self.valid_set:
                 #print(index)
-                indexs.append(index)
                 try:
                     #print({"index":index,"len(self.train_labels":len(self.train_labels),"train_data":len(self.train_data)})
-                    _label =  self.train_labels[index]+ [0]* (self.sequence_length -len(self.train_labels[index]))
+                    _label = ( self.train_labels[index]+ np.zeros(shape=[self.sequence_length]).tolist() )[:self.sequence_length]
                 except:
                     print({"index":index,"len(self.train_labels":len(self.train_labels),"train_data":len(self.train_data)})
                     raise  "Data Error"
@@ -139,28 +137,26 @@ class DATA_PREPROCESS:
                 __x=[]
                 for i in range(len(_x)):
                     __x +=(self.word2vec[ int(_x[i]) ].tolist())
-                __x=__x + [0]*(self.sequence_length * self.embedding_vec_length-len(__x))
+                __x=__x + np.zeros(shape=[self.sequence_length * self.embedding_vec_length-len(__x)]).tolist()
                 x.append(np.array(__x))
                 y.append(_label)
                 seq_lengths.append(self.sequence_length)
         x=np.reshape(x,newshape=[-1])
-        return np.float32(x),np.int32(y),np.int32(seq_lengths),indexs
+        return np.float32(x),np.int32(y),np.int32(seq_lengths)
 
     def next_valid_batch(self,batch_size):
         x=[]
         y=[]
         seq_lengths = []
-
         while len(x) < batch_size:
             index = random.randint(0,len(self.valid_set)-2)
             if index in self.valid_set:
-
-                _label = self.train_labels[index]+[0]*(self.sequence_length - len(self.train_labels[index]))
+                _label = ( np.array(self.train_labels[index]).tolist()+np.zeros(shape=[self.sequence_length]).tolist() )[:self.sequence_length]
                 _x=self.train_data[index]
                 __x=[]
                 for i in range(len(_x)):
                     __x +=(self.word2vec[ int(_x[i]) ].tolist())
-                __x=__x + [0]*(self.sequence_length * self.embedding_vec_length-len(__x))
+                __x=__x + np.zeros(shape=[self.sequence_length * self.embedding_vec_length-len(__x)]).tolist()
                 x.append(np.array(__x))
                 y.append(_label)
                 seq_lengths.append(self.sequence_length)
