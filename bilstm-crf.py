@@ -95,7 +95,7 @@ with tf.Session() as sess:
                 label,_=crf.viterbi_decode(scores[i],transition_params=transition_matrix_out)
                 label=label[:efficient_sequence_length[i]]
                 print(label)
-            logger.info("Save a stage model para.")
+            logger.info("Save a stage model para for %d epoch."%(step/display_step))
             saver.save(sess,checkpoint_prefix)
         step+=1
     saver.save(sess,checkpoint_prefix)
