@@ -87,7 +87,7 @@ with tf.Session() as sess:
     while step<max_batch:
         batch_x,batch_y,efficient_sequence_length = dataGen.next_train_batch()
         _,loss,score=sess.run([train_op,cost,logit],{input_x:batch_x,input_y:batch_y,sequence_lengths:efficient_sequence_length})
-        logging.info({'time':datetime.datetime.now(),'loss':loss,'step':step})
+        logging.info({'loss':loss,'step':step})
         if(step % display_step ==0):
             valid_x,valid_y,efficient_sequence_length=dataGen.next_valid_batch()
             scores,transition_matrix_out=sess.run([logit,transition_matrix],{input_x:valid_x,input_y:valid_y,sequence_lengths:efficient_sequence_length})
