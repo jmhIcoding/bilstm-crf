@@ -4,7 +4,7 @@ from  tensorflow.contrib import  crf
 import  random
 from  utils import *
 #超参数
-batch_size=300
+batch_size=100
 dataGen = DATAPROCESS(train_data_path="data/source_data.txt",
                           train_label_path="data/source_label.txt",
                           test_data_path="data/test_data.txt",
@@ -15,7 +15,7 @@ dataGen = DATAPROCESS(train_data_path="data/source_data.txt",
                         )
 #模型超参数
 tag_nums =len(dataGen.state)    #标签数目
-hidden_nums = 30                 #bi-lstm的隐藏层单元数目
+hidden_nums = 500                #bi-lstm的隐藏层单元数目
 learning_rate = 0.0005          #学习速率
 sentence_len = dataGen.sentence_length #句子长度,输入到网络的序列长度
 frame_size = dataGen.embedding_length #句子里面每个词的词向量长度
