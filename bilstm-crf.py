@@ -21,8 +21,8 @@ dataGen = DATAPROCESS(train_data_path="data/source_data.txt",
                         )
 #模型超参数
 tag_nums =len(dataGen.state)    #标签数目
-hidden_nums = 500                #bi-lstm的隐藏层单元数目
-learning_rate = 0.0005          #学习速率
+hidden_nums = 600                #bi-lstm的隐藏层单元数目
+learning_rate = 0.00075          #学习速率
 sentence_len = dataGen.sentence_length #句子长度,输入到网络的序列长度
 frame_size = dataGen.embedding_length #句子里面每个词的词向量长度
 
@@ -37,7 +37,7 @@ with tf.name_scope('projection'):
     #投影层,先将输入的词投影成相应的词向量
     word_id = input_x
     word_vectors = tf.nn.embedding_lookup(word_embeddings,ids=word_id,name='word_vectors')
-    #word_vectors = tf.nn.dropout(word_vectors,0.8)
+    word_vectors = tf.nn.dropout(word_vectors,0.8)
 with tf.name_scope('bi-lstm'):
 
     labels = tf.reshape(input_y,shape=[-1,sentence_len],name='labels')
@@ -48,7 +48,7 @@ with tf.name_scope('bi-lstm'):
     fw_output = output[0]#[batch_size,sentence_len,hidden_nums]
     bw_output =output[1]#[batch_size,sentence_len,hidden_nums]
     contact = tf.concat([fw_output,bw_output],-1,name='bi_lstm_concat')#[batch_size,sentence_len,2*hidden_nums]
-    #contact = tf.nn.dropout(contact,0.9)
+    contact = tf.nn.dropout(contact,0.9)
     s=tf.shape(contact)
     contact_reshape=tf.reshape(contact,shape=[-1,2*hidden_nums],name='contact')
     W=tf.get_variable('W',dtype=tf.float32,initializer=tf.contrib.layers.xavier_initializer(),shape=[2*hidden_nums,tag_nums],trainable=True)
