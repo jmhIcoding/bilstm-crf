@@ -3,6 +3,12 @@ import  tensorflow as tf
 from  tensorflow.contrib import  crf
 import  random
 from  utils import *
+import logging
+import datetime
+
+logging.basicConfig(level=logging.INFO,format="%(asctime)s  - %(message)s")
+logger = logging.getLogger(__name__)
+
 #超参数
 batch_size=100
 dataGen = DATAPROCESS(train_data_path="data/source_data.txt",
@@ -57,25 +63,50 @@ with tf.name_scope("crf") :
 with tf.name_scope("train-op"):
     global_step = tf.Variable(0,name='global_step',trainable=False)
     optim = tf.train.AdamOptimizer(learning_rate)
-    optim.minimize(cost)
-    #grads_and_vars = optim.compute_gradients(cost)
-    #grads_and_vars = [[tf.clip_by_value(g,-5,5),v] for g,v in grads_and_vars]
-    #train_op = optim.apply_gradients(grads_and_vars,global_step)
+    #train_op=optim.minimize(cost)
+    grads_and_vars = optim.compute_gradients(cost)
+    grads_and_vars = [[tf.clip_by_value(g,-5,5),v] for g,v in grads_and_vars]
+    train_op = optim.apply_gradients(grads_and_vars,global_step)
 #
-display_step = len(dataGen.train_batches)*10
-max_batch = 10000
+#载入模型如果有参数的话
+checkpoint_prefix="paras/bilstm-crf-models"
+saver = tf.train.Saver()
+
+display_step = len(dataGen.train_batches)
+epoch_nums = 40 #迭代的数据轮数
+max_batch = len(dataGen.train_batches)*epoch_nums
 step=1
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
+    cpkt=tf.train.get_checkpoint_state(checkpoint_prefix)
+    if  cpkt and cpkt.model_checkpoint_path:
+        saver.restore(sess,cpkt.model_checkpoint_path)
+        logging.info("restore from history models.")
+    else:
+        logging.warning("retrain a models.")
     while step<max_batch:
-        batch_x,batch_y = dataGen.next_train_batch()
-        _,loss,score=sess.run([train_op,cost,logit],{input_x:batch_x,input_y:batch_y,sequence_lengths:[sentence_len]*batch_size})
-        print({'loss':loss,'step':step})
+        batch_x,batch_y,efficient_sequence_length = dataGen.next_train_batch()
+        _,loss,score=sess.run([train_op,cost,logit],{input_x:batch_x,input_y:batch_y,sequence_lengths:efficient_sequence_length})
+        logging.info({'time':datetime.datetime.now(),'loss':loss,'step':step})
         if(step % display_step ==0):
-            valid_x,valid_y=dataGen.next_valid_batch()
-
-            scores,transition_matrix_out=sess.run([logit,transition_matrix],{input_x:valid_x,input_y:valid_y,sequence_lengths:[sentence_len]*batch_size})
+            valid_x,valid_y,efficient_sequence_length=dataGen.next_valid_batch()
+            scores,transition_matrix_out=sess.run([logit,transition_matrix],{input_x:valid_x,input_y:valid_y,sequence_lengths:efficient_sequence_length})
             for i in range(batch_size):
                 label,_=crf.viterbi_decode(scores[i],transition_params=transition_matrix_out)
+                label=label[:efficient_sequence_length[i]]
                 print(label)
         step+=1
+
+    saver.save(sess,checkpoint_prefix)
+    logger.info("save models well.")
+    data_x,label_y,efficient_sequence_length=dataGen.test_data()
+    scores,transition_matrix_out=sess.run([logit,transition_matrix],{input_x:data_x,input_y:label_y,sequence_lengths:efficient_sequence_length})
+    real_labels = label_y
+    predict_labels =[]
+    for i in range(len(scores)):
+        labels,_=crf.viterbi_decode(scores[i],transition_matrix_out)
+        predict_labels.append(labels)
+    print("====================TEST======================")
+    print(evaluate(predict_labels,real_labels,efficient_sequence_length))
+    print("===================END MODEL==================")
+
