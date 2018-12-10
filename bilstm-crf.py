@@ -21,7 +21,7 @@ dataGen = DATAPROCESS(train_data_path="data/source_data.txt",
                         )
 #模型超参数
 tag_nums =len(dataGen.state)    #标签数目
-hidden_nums = 600                #bi-lstm的隐藏层单元数目
+hidden_nums = 650                #bi-lstm的隐藏层单元数目
 learning_rate = 0.00075          #学习速率
 sentence_len = dataGen.sentence_length #句子长度,输入到网络的序列长度
 frame_size = dataGen.embedding_length #句子里面每个词的词向量长度
@@ -47,13 +47,17 @@ with tf.name_scope('bi-lstm'):
     output,_state = tf.nn.bidirectional_dynamic_rnn(fw_lstm_cell,bw_lstm_cell,inputs=word_vectors,sequence_length=sequence_lengths,dtype=tf.float32)
     fw_output = output[0]#[batch_size,sentence_len,hidden_nums]
     bw_output =output[1]#[batch_size,sentence_len,hidden_nums]
+    V1=tf.get_variable('V1',dtype=tf.float32,initializer=tf.contrib.layers.xavier_initializer(),shape=[hidden_nums,hidden_nums])
+    V2=tf.get_variable('V2',dtype=tf.float32,initializer=tf.contrib.layers.xavier_initializer(),shape=[hidden_nums,hidden_nums])
+    fw_output = tf.reshape(tf.matmul(tf.reshape(fw_output,[-1,hidden_nums],name='Lai') , V1),shape=tf.shape(output[0]))
+    bw_output = tf.reshape(tf.matmul( tf.reshape(bw_output,[-1,hidden_nums],name='Rai') , V2),shape=tf.shape(output[1]))
     contact = tf.concat([fw_output,bw_output],-1,name='bi_lstm_concat')#[batch_size,sentence_len,2*hidden_nums]
     contact = tf.nn.dropout(contact,0.9)
     s=tf.shape(contact)
     contact_reshape=tf.reshape(contact,shape=[-1,2*hidden_nums],name='contact')
     W=tf.get_variable('W',dtype=tf.float32,initializer=tf.contrib.layers.xavier_initializer(),shape=[2*hidden_nums,tag_nums],trainable=True)
     b=tf.get_variable('b',initializer=tf.zeros(shape=[tag_nums]))
-    p=tf.matmul(contact_reshape,W)+b
+    p=tf.nn.relu(tf.matmul(contact_reshape,W)+b)
     logit= tf.reshape(p,shape=[-1,s[1],tag_nums],name='omit_matrix')
 
 
@@ -73,7 +77,7 @@ checkpoint_prefix="paras/bilstm-crf-models"
 saver = tf.train.Saver()
 
 display_step = len(dataGen.train_batches)
-epoch_nums = 40 #迭代的数据轮数
+epoch_nums = 60 #迭代的数据轮数
 max_batch = len(dataGen.train_batches)*epoch_nums
 step=1
 with tf.Session() as sess:
