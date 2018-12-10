@@ -24,3 +24,6 @@ O ：其他 }
 如周恩来对应B-PER, I-PER, I-PER
 (3) 测试语料
 目录data 中 Test_data.txt 文件为测试文本 ，Test_label.txt 文件为对应的标签 （格式同训练语料）
+(4)
+bilstm-crf.py :网络代码
+utils.py	  :数据集处理函数
