@@ -37,4 +37,7 @@ O ：其他
 
 bilstm-crf.py :网络代码
 
- utils.py	  :数据集处理函数
+utils.py	  :数据集处理函数
+# 运行环境
+Tensorflow:1.3.0
+python :3.5
