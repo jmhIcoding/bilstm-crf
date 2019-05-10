@@ -1,6 +1,17 @@
 # bilstm-crf
 双向lstm+crf 序列标注,国科大自然语言处理课程作业
 完成地名、人名、组织名的标注
+# 使用
+```
+git clone https://github.com/jmhIcoding/bilstm-crf.git
+git checkout rewrite
+```
+# 运行环境
+
+Tensorflow : 1.3.0
+
+python : 3.5
+
 # 思路
 1. 使用source_data.txt里面的语料训练词向量
 2. 设计一个双向的lstm神经网络训练得到各节点特征函数
@@ -38,6 +49,4 @@ O ：其他
 bilstm-crf.py :网络代码
 
 utils.py	  :数据集处理函数
-# 运行环境
-Tensorflow:1.3.0
-python :3.5
+
