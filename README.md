@@ -50,3 +50,10 @@ bilstm-crf.py :网络代码
 
 utils.py	  :数据集处理函数
 
+(4) 博客
+
+https://blog.csdn.net/jmh1996/article/details/83476061 BiLSTM+CRF (一）双向RNN 浅谈 
+
+https://blog.csdn.net/jmh1996/article/details/84779680 BiLSTM+CRF(二）命名实体识别
+
+https://blog.csdn.net/jmh1996/article/details/84934260 BiLSTM+CRF(三）命名实体识别 实践与总结
