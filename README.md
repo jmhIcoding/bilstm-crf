@@ -50,7 +50,7 @@ bilstm-crf.py :网络代码
 
 utils.py	  :数据集处理函数
 
-(4) 博客
+# 博客
 
 https://blog.csdn.net/jmh1996/article/details/83476061 BiLSTM+CRF (一）双向RNN 浅谈 
 
